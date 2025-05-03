@@ -6,6 +6,7 @@ use App\Models\Category;
 use Illuminate\Http\Request;
 use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
+use Validator;
 
 class CategoryController extends Controller
 {
@@ -17,7 +18,7 @@ class CategoryController extends Controller
         try
         {
             $categories = Category::latest()->get();
-            return response()->json(['status'=>count($categories) > 0, 'data'=>$categories])
+            return response()->json(['status'=>count($categories) > 0, 'data'=>$categories]);
         }catch(Exception $e){
             return response()->json(['status'=>false, 'code'=>$e->getCode(), 'message'=>$e->getMessage()],500);
         }
@@ -34,10 +35,21 @@ class CategoryController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreCategoryRequest $request)
+    public function store(Request $request)
     {
         try
-        {
+        {   
+
+            $validator = Validator::make($request->all(), [
+                'category_name' => 'required|string|max:50|unique:categories',
+                'status' => 'required|in:Active,Inactive',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
             Category::create($request->validated());
             return response()->json(['status'=>true, 'message'=>'Successfully a category has been added']);
         }catch(Exception $e){
@@ -67,7 +79,19 @@ class CategoryController extends Controller
     public function update(UpdateCategoryRequest $request, Category $category)
     {
         try
-        {
+        {   
+
+            $validator = Validator::make($request->all(), [
+                'category_name' => 'required|string|max:50|unique:categories,category_name,' . $category->id,
+                'status' => 'required|in:Active,Inactive',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
             $category->update($request->validated());
             return response()->json(['status'=>true, 'message'=>'Successfully the category has been updated']);
         }catch(Exception $e){
